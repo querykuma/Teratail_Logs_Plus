@@ -10,7 +10,7 @@ module.exports = {
     "rules": {
         "no-console": "off",
         "accessor-pairs": "error",
-        "array-bracket-newline": "error",
+        "array-bracket-newline": ["error", "consistent"],
         "array-bracket-spacing": "error",
         "array-callback-return": "error",
         "array-element-newline": "off",
