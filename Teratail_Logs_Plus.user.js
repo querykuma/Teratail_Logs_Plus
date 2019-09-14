@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.01
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -549,7 +549,6 @@
        */
       init_userscript: function () {
 
-
         this.init_userscript_mutation();
       },
 
@@ -565,7 +564,7 @@
         var observer = new MutationObserver(() => {
 
           clearTimeout(timeoutID);
-          timeoutID = setTimeout(() => this.highlight_counts(), 100);
+          timeoutID = setTimeout(() => this.highlight_counts(), 300);
         });
 
         const config = {
@@ -615,7 +614,7 @@ position: fixed; width: 80%; height: 80%; background-color: whitesmoke; z-index:
 
     teratail_questions();
 
-  } else if (/^https:\/\/teratail.com\/(tags\/|$|search\?q)/.test(document.URL)) {
+  } else if (/^https:\/\/teratail.com\/(tags\/|feed\/|$|search\?q)/.test(document.URL)) {
     /* tagsページ */
 
     teratail_tags();
