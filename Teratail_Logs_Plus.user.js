@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      1.01
+// @version      1.02
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -95,13 +95,13 @@
        */
       add_log_question_ps: function () {
 
-        var scroll_to = document.querySelector(".p-questionContents");
-
         for (var ui of document.querySelectorAll(".p-questionContents .p-rewriteRequest__commentBox")) {
 
           var who = ui.querySelector("a");
           var content = ui.querySelector(".p-rewriteRequest__commentBody");
           var post_time = ui.querySelector(".p-rewriteRequest__postTime");
+
+          var scroll_to = ui;
 
           var date_modified = post_time.querySelector("[title]");
           var date_created;
@@ -304,7 +304,25 @@
         var id = e.target.getAttribute("tera_log_id");
 
         if (id) {
-          var rect = this.logs[id].scroll_to.getBoundingClientRect();
+
+          var target = this.logs[id].scroll_to;
+
+          if (target.classList.contains("p-rewriteRequest__commentBox")) {
+
+            target = target.parentElement;
+
+            if (!target.parentElement.classList.contains("is-show")) {
+
+              target = target.parentElement.parentElement;
+            }
+          }
+
+          if (target.classList.contains("is-hidden")) {
+
+            target = target.parentElement;
+          }
+
+          var rect = target.getBoundingClientRect();
 
           this.l_tera_logs__overlay.classList.remove('show');
 
