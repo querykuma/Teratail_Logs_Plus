@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      1.02
+// @version      1.03
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -384,7 +384,7 @@
         // 退会済みユーザーに対応するため
         if (target) {
 
-          var mat = target.textContent.match(/(\d+)/);
+          var mat = target.textContent.match(/([-\d]+)/);
           if (mat) {
 
             var score = Number(mat[0]);
@@ -493,7 +493,7 @@
       // eslint-disable-next-line max-params
       highlight_elem_cond: function (elem, value, cond, color) {
 
-        var [, cond_compare, cond_value] = cond.match(/^([><])(\d+)$/);
+        var [, cond_compare, cond_value] = cond.match(/^([><])([-\d]+)$/);
 
         if (cond_compare === '>') {
 
