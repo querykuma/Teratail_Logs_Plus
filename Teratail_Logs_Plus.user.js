@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      1.03
+// @version      1.04
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -103,7 +103,11 @@
 
           var scroll_to = ui;
 
-          var date_modified = post_time.querySelector("[title]");
+          var date_modified;
+          if (date_modified) {
+            date_modified = post_time.querySelector("[title]");
+          }
+
           var date_created;
           if (date_modified) {
 
@@ -172,7 +176,11 @@
         var scroll_to = ci;
         var post_time = ci.querySelector('.p-replyComment__postTime');
 
-        var date_modified = post_time.querySelector("[title]");
+        var date_modified;
+        if (date_modified) {
+          date_modified = post_time.querySelector("[title]");
+        }
+
         var date_created;
         if (date_modified) {
 
