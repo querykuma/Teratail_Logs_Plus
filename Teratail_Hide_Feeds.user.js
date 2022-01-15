@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Hide Feeds
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.01
 // @description  tagsページでタグやタイトルで指定したフィードを非表示にする
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -10,6 +10,7 @@
 
 (function () {
     'use strict';
+    console.log('Teratail Hide Feeds');
 
     // フィードを非表示にしたいタグ名（ここの値を変えてください。更新したときのため値を保存しておいてください）
     const HIDE_TAGS_RE = [
@@ -64,7 +65,7 @@
 
         if (bi.style.display === "none") return;
 
-        var title = bi.querySelector(".C-questionFeedItemTitle").textContent;
+        var title = bi.querySelector("h2").textContent;
 
         if (is_hide_title(title)) {
 
@@ -82,7 +83,7 @@
 
         if (bi.style.display === "none") return;
 
-        var tags = [...bi.querySelectorAll(".p-questionFeedTagList a")].map((a) => a.textContent);
+        var tags = [...bi.querySelector('[class^="tagPopupList_contain"]').children].map((a) => a.querySelector('a').textContent);
 
         const len = tags.length;
 
@@ -106,7 +107,7 @@
      */
     function hide_feeds() {
 
-        for (var bi of document.querySelectorAll("#mainContainer .boxItem")) {
+        for (var bi of document.querySelectorAll("article")) {
 
             hide_feeds_title(bi);
             hide_feeds_tags(bi);
@@ -122,7 +123,7 @@
 
         var timeoutID = setTimeout(hide_feeds, 0);
 
-        var target = document.getElementById("mainContainer");
+        var target = document.body;
         var observer = new MutationObserver(() => {
 
             clearTimeout(timeoutID);
