@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      1.05
+// @version      1.06
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -461,6 +461,7 @@
 	#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; }
 	.c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; margin-bottom:20px; font-size:1.6rem; max-width: 1120px; margin-right: auto; margin-left: auto; }
 	.c_tera_logs__eval { font-weight: bold; }
+  html { scroll-behavior: initial; }
 	</style>`);
   };
 
