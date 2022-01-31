@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      1.06
+// @version      1.7
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -10,14 +10,17 @@
 
 (function () {
   'use strict';
-  console.log('Teratail Logs Plus');
+
+  var f_debug = 0;
 
   var g_count = 0;
   var g_current_url;
-  var f_debug = 0;
+  var f_need_run_callback = false;
 
   // 自身によるDOM操作をMutationObserverに無視するように伝えるフラグ
   var f_ignore_mutation = false;
+
+  console.log('Teratail Logs Plus');
 
   /**
    * 表示されていたらtrueを返す
@@ -132,7 +135,7 @@
 
     if (date_modified) {
 
-      c_tera_logs__add_log(who, date_modified.lastChild, scroll_to, content, "編集", eval_value);
+      c_tera_logs__add_log(who, date_modified.lastChild, scroll_to, content, "投編", eval_value);
     }
   };
 
@@ -150,7 +153,7 @@
 
       if (post_time.lastChild.textContent.trim() === '編集') {
         var date_modified = post_time.firstChild.textContent.trim();
-        c_tera_logs__add_log(who, date_modified, scroll_to, content, "編集");
+        c_tera_logs__add_log(who, date_modified, scroll_to, content, "追編");
       } else {
         var date_created = post_time.firstChild.textContent.trim();
         c_tera_logs__add_log(who, date_created, scroll_to, content, "追記");
@@ -193,7 +196,7 @@
     }
 
     if (date_modified) {
-      c_tera_logs__add_log(who, date_modified, scroll_to, content, "編集", eval_value);
+      c_tera_logs__add_log(who, date_modified, scroll_to, content, "回編", eval_value);
     }
   };
 
@@ -210,7 +213,7 @@
     var post_time2 = post_time.firstChild;
 
     if (post_time.childNodes.length == 2) {
-      c_tera_logs__add_log(who, post_time2, scroll_to, content, "編集");
+      c_tera_logs__add_log(who, post_time2, scroll_to, content, "コ編");
     } else {
       c_tera_logs__add_log(who, post_time2, scroll_to, content, "コメ");
     }
@@ -295,34 +298,40 @@
 
     var l_tera_logs__overlay_html = sorted_logs.map((l) => {
 
+      var id = l[0];
+      var log = l[1];
+
       var type_html;
-      switch (l[1].type) {
-        case '編集':
-          type_html = '編集';
+      switch (log.type) {
+        case '投編':
+        case '追編':
+        case '回編':
+        case 'コ編':
+          type_html = log.type;
           break;
 
         case '回答':
         case '回ベ':
         case '回自':
-          type_html = `<span style="color: #F94A00;">${l[1].type}</span>`;
+          type_html = `<span style="color: #F94A00;">${log.type}</span>`;
           break;
 
         default:
-          type_html = `<span style="color: #0404b4;">${l[1].type}</span>`;
+          type_html = `<span style="color: #0404b4;">${log.type}</span>`;
           break;
       }
 
       var eval_html;
-      if (l[1].eval_value === '0') {
+      if (log.eval_value === '0') {
 
         eval_html = '+0';
       } else {
 
-        eval_html = l[1].eval_value;
+        eval_html = log.eval_value;
       }
       eval_html = `<span class="c_tera_logs__eval">${eval_html}</span>`;
 
-      return `<li><span class="log_line" tera_log_id="${l[0]}" title="${c_tera_logs__escape_html(l[1].content)}">${l[1].date} ${type_html} [ ${l[1].who} ${eval_html} ] ${c_tera_logs__escape_html(l[1].content.substr(0, 30))}</span></li>`;
+      return `<li><span class="log_line" tera_log_id="${id}" title="${c_tera_logs__escape_html(log.content)}">${log.date} ${type_html} [ ${log.who} ${eval_html} ] ${c_tera_logs__escape_html(log.content.substr(0, 30))}</span></li>`;
     }).join('\n');
 
     TeraLogs.l_tera_logs__overlay.innerHTML = `<ol>${l_tera_logs__overlay_html}</ol>`;
@@ -455,10 +464,10 @@
 	#l_tera_logs__overlay span.log_line { padding: 4px; }
 	#l_tera_logs__overlay span.log_line:hover { outline: 1px dashed #5342e9; border-radius: 3px; cursor: pointer; }
 	#l_tera_logs__overlay  { transition: all .3s ease; opacity: 0; visibility: hidden; transform: translateY(30px);
-	position: fixed; width: 80%; height: 80%; background-color: whitesmoke; z-index: 1000; left: 10%; top: 10%; overflow: auto; padding: 10px; border-radius:5px; }
+	position: fixed; width: 80%; height: 80%; background-color: whitesmoke; z-index: 1000; left: 10%; top: 10%; overflow: auto; padding: 10px; border-radius:5px; white-space: nowrap;}
 	#l_tera_logs__overlay.show { opacity: 1; visibility: visible; transform: translateY(0px); }
 	#l_tera_logs__overlay > ol {list-style: decimal; margin-left: 3em; }
-	#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; }
+	#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; width: initial; }
 	.c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; margin-bottom:20px; font-size:1.6rem; max-width: 1120px; margin-right: auto; margin-left: auto; }
 	.c_tera_logs__eval { font-weight: bold; }
   html { scroll-behavior: initial; }
@@ -508,7 +517,7 @@
   /**
    * Next.jsがスクロール時に発生させるmutationを無視するためにチェックする
    * @param {MutationRecord[]} mutations
-   * @returns
+   * @returns {boolean}
    */
   var check_ignore_mutations = (mutations) => {
     for (let index = 0; index < mutations.length; index++) {
@@ -549,12 +558,23 @@
     };
 
     var mutation_callback = (mutations) => {
-      if (f_ignore_mutation) {
-        return;
-      }
+      if (!f_need_run_callback) {
+        // callback()を呼び出すmutationの後のmutationでignore_mutationされる場合がある
+        if (f_ignore_mutation) {
+          if (f_debug > 1) {
+            console.log('f_ignore_mutation', mutations);
+          }
+          return;
+        }
 
-      if (check_ignore_mutations(mutations)) {
-        return;
+        if (check_ignore_mutations(mutations)) {
+          if (f_debug > 1) {
+            console.log('check_ignore_mutations', mutations);
+          }
+          return;
+        }
+
+        f_need_run_callback = true;
       }
 
       if (f_debug > 1) {
@@ -562,7 +582,10 @@
       }
 
       clearTimeout(timeoutID);
-      timeoutID = setTimeout(() => { callback(); }, interval);
+      timeoutID = setTimeout(() => {
+        callback();
+        f_need_run_callback = false;
+      }, interval);
     };
 
     timeoutID = setTimeout(() => { callback(); }, interval);

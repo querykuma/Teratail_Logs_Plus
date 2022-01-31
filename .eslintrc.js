@@ -34,7 +34,7 @@ module.exports = {
                 "allowSingleLine": true
             }
         ],
-        "callback-return": "error",
+        "callback-return": "off",
         "camelcase": "off",
         "capitalized-comments": "off",
         "class-methods-use-this": "error",
