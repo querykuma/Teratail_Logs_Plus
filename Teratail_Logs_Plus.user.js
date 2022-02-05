@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      2.0
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -16,6 +16,8 @@
   var g_count = 0;
   var g_current_url;
   var f_need_run_callback = false;
+
+  var g_author = null;
 
   // 自身によるDOM操作をMutationObserverに無視するように伝えるフラグ
   var f_ignore_mutation = false;
@@ -131,11 +133,21 @@
     var content = document.querySelector('[class*="markdown_markdownBody__"]');
     var eval_value = document.querySelectorAll('[class*="questionHeader_rating__"]')[1].children[1];
 
-    c_tera_logs__add_log(who, date_created, scroll_to, content, "投稿", eval_value);
+    if (g_author && g_author === who.textContent) {
+      var who_author = who.textContent + '（作者）';
+      c_tera_logs__add_log(who_author, date_created, scroll_to, content, "投稿", eval_value);
 
-    if (date_modified) {
+      if (date_modified) {
 
-      c_tera_logs__add_log(who, date_modified.lastChild, scroll_to, content, "投編", eval_value);
+        c_tera_logs__add_log(who_author, date_modified.lastChild, scroll_to, content, "投編", eval_value);
+      }
+    } else {
+      c_tera_logs__add_log(who, date_created, scroll_to, content, "投稿", eval_value);
+
+      if (date_modified) {
+
+        c_tera_logs__add_log(who, date_modified.lastChild, scroll_to, content, "投編", eval_value);
+      }
     }
   };
 
@@ -434,6 +446,46 @@
   };
 
   /**
+   * 作者のコメントに印をつける
+   */
+  var add_marker = (who) => {
+    if (g_author && who.textContent === g_author) {
+      if (who.childNodes.length === 1) {
+        who.append('（作者）');
+      }
+    }
+  };
+
+  /**
+   * 作者のコメントに印をつけてまわる
+   */
+  var add_author_markers = () => {
+    // 質問
+    var who = document.querySelector('[class*="questionHeader_profile__"]').firstElementChild;
+
+    g_author = who.textContent;
+
+    // 質問へのコメント
+    for (var ui of document.querySelectorAll('article[class*="questionCommentListItem_container__"]')) {
+
+      who = ui.querySelector('[class*="questionCommentListItem_name__"]');
+      add_marker(who);
+    }
+
+    // 回答
+    for (var rc of document.querySelectorAll('[class*="answerBlock_container__"]')) {
+      who = rc.querySelector('[class*="userProfile_displayName__"]');
+      add_marker(who);
+
+      // 回答へのコメント
+      for (var ci of rc.querySelectorAll("article")) {
+        who = ci.querySelector('[class*="answerCommentListItem_name__"]');
+        add_marker(who);
+      }
+    }
+  };
+
+  /**
   * 質問ページのとき
   */
   var teratail_questions = () => {
@@ -447,6 +499,8 @@
     add_warning_dateCreated();
     add_warning_score();
     add_warning_evaluation();
+
+    add_author_markers();
   };
 
   /**
