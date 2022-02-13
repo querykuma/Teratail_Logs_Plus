@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -51,7 +51,8 @@
 
   var TeraLogs = {
     id: 0,
-    f_logs_initialized: false
+    f_logs_initialized: false,
+    f_overlay_listener_added: false
   };
 
   /**
@@ -273,6 +274,8 @@
     var id = e.target.getAttribute("tera_log_id");
 
     if (id) {
+      TeraLogs.logs[id].visited = true;
+
       var target = TeraLogs.logs[id].scroll_to;
       target = tool__closest_visible(target);
 
@@ -343,15 +346,25 @@
       }
       eval_html = `<span class="c_tera_logs__eval">${eval_html}</span>`;
 
-      return `<li><span class="log_line" tera_log_id="${id}" title="${c_tera_logs__escape_html(log.content)}">${log.date} ${type_html} [ ${log.who} ${eval_html} ] ${c_tera_logs__escape_html(log.content.substr(0, 30))}</span></li>`;
+      var s_class_list = "log_line";
+      if (log.visited) {
+        s_class_list += " l_tera_logs__line_visited";
+      }
+
+      return `<li><span class="${s_class_list}" tera_log_id="${id}" title="${c_tera_logs__escape_html(log.content)}">${log.date} ${type_html} [ ${log.who} ${eval_html} ] ${c_tera_logs__escape_html(log.content.substr(0, 30))}</span></li>`;
     }).join('\n');
 
     TeraLogs.l_tera_logs__overlay.innerHTML = `<ol>${l_tera_logs__overlay_html}</ol>`;
 
-    TeraLogs.l_tera_logs__overlay.addEventListener('click', (e) => {
+    if (!TeraLogs.f_overlay_listener_added) {
+      // 一度だけ実行
+      TeraLogs.l_tera_logs__overlay.addEventListener('click', (e) => {
+        e.stopPropagation();
 
-      c_tera_logs__overlay_click(e);
-    });
+        c_tera_logs__overlay_click(e);
+      });
+      TeraLogs.f_overlay_listener_added = true;
+    }
 
     TeraLogs.l_tera_logs__overlay.classList.add('show');
   };
@@ -373,10 +386,16 @@
 
     var c_tera_logs__button = document.getElementById("c_tera_logs__button");
 
-    c_tera_logs__button.addEventListener('click', () => {
+    c_tera_logs__button.addEventListener('click', (e) => {
+      e.stopPropagation();
+
       c_tera_logs__button_click();
     });
 
+    // eslint-disable-next-line no-unused-vars
+    document.addEventListener('click', (e) => {
+      TeraLogs.l_tera_logs__overlay.classList.remove('show');
+    });
   };
 
   /**
@@ -517,12 +536,12 @@
 	/* tera logs plus */
 	#l_tera_logs__overlay span.log_line { padding: 4px; }
 	#l_tera_logs__overlay span.log_line:hover { outline: 1px dashed #5342e9; border-radius: 3px; cursor: pointer; }
-	#l_tera_logs__overlay  { transition: all .3s ease; opacity: 0; visibility: hidden; transform: translateY(30px);
-	position: fixed; width: 80%; height: 80%; background-color: whitesmoke; z-index: 1000; left: 10%; top: 10%; overflow: auto; padding: 10px; border-radius:5px; white-space: nowrap;}
+  .l_tera_logs__line_visited { color:#B85A68; }
+	#l_tera_logs__overlay { transition: all .3s ease; opacity: 0; visibility: hidden; transform: translateY(30px); position: fixed; width: 90%; height: 80%; background-color: whitesmoke; z-index: 1000; left: 5%; top: 10%; overflow: auto; padding: 10px; border-radius:5px; white-space: nowrap; box-shadow: 0 0 12px grey; }
 	#l_tera_logs__overlay.show { opacity: 1; visibility: visible; transform: translateY(0px); }
-	#l_tera_logs__overlay > ol {list-style: decimal; margin-left: 3em; }
-	#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; width: initial; }
-	.c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; margin-bottom:20px; font-size:1.6rem; max-width: 1120px; margin-right: auto; margin-left: auto; }
+	#l_tera_logs__overlay > ol {list-style: decimal; }
+	#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; width: initial; background-color: #12c74b!important; }
+  .c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; font-size:1.6rem; border-radius: 5px; margin: 20px max(16px, calc((100% - 1120px)/2)); }
 	.c_tera_logs__eval { font-weight: bold; }
   html { scroll-behavior: initial; }
 	</style>`);
