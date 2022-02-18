@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      2.2
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -61,6 +61,7 @@
   var c_tera_logs__initialize = () => {
     TeraLogs.logs = {};
     TeraLogs.f_logs_initialized = false;
+    TeraLogs.f_overlay_listener_added = false;
   };
 
   /**
@@ -78,7 +79,7 @@
       '>': '&gt;'
     };
 
-    return text.replace(/[&'`"<>]/g, (m) => replace_table[m]);
+    return text.replace(/[&'`"<>]/gu, (m) => replace_table[m]);
   };
 
   /**
@@ -271,10 +272,12 @@
    * @param {MouseEvent} e
    */
   var c_tera_logs__overlay_click = (e) => {
-    var id = e.target.getAttribute("tera_log_id");
+    var e_log_line = e.target.closest('.log_line');
 
-    if (id) {
-      TeraLogs.logs[id].visited = true;
+    if (e_log_line) {
+      var id = e_log_line.getAttribute("tera_log_id");
+
+      e_log_line.classList.add('l_tera_logs__line_visited');
 
       var target = TeraLogs.logs[id].scroll_to;
       target = tool__closest_visible(target);
@@ -294,16 +297,30 @@
   };
 
   /**
+   * ホバーした作者名をハイライトする。
+   * @param {string} s_who
+   */
+  var c_tera_logs__highlight_who = (s_who) => {
+    var e_who_s = TeraLogs.l_tera_logs__overlay.querySelectorAll('.c_tera_logs__who');
+    for (let index = 0; index < e_who_s.length; index++) {
+      const e_who = e_who_s[index];
+      if (e_who.textContent === s_who) {
+        e_who.classList.add('hover_who');
+      } else {
+        e_who.classList.remove('hover_who');
+      }
+    }
+  };
+
+  /**
    * ログボタンをクリックしたとき
    *
    * @returns
    */
   var c_tera_logs__button_click = () => {
 
-    if (TeraLogs.l_tera_logs__overlay.classList.contains('show')) {
-
-      TeraLogs.l_tera_logs__overlay.classList.remove('show');
-
+    if (TeraLogs.f_overlay_listener_added) {
+      TeraLogs.l_tera_logs__overlay.classList.toggle('show');
       return;
     }
 
@@ -337,34 +354,41 @@
       }
 
       var eval_html;
-      if (log.eval_value === '0') {
-
-        eval_html = '+0';
-      } else {
+      if (log.eval_value === '' || Number(log.eval_value) < 0) {
 
         eval_html = log.eval_value;
+      } else {
+
+        eval_html = `+${log.eval_value}`;
       }
       eval_html = `<span class="c_tera_logs__eval">${eval_html}</span>`;
 
-      var s_class_list = "log_line";
-      if (log.visited) {
-        s_class_list += " l_tera_logs__line_visited";
-      }
-
-      return `<li><span class="${s_class_list}" tera_log_id="${id}" title="${c_tera_logs__escape_html(log.content)}">${log.date} ${type_html} [ ${log.who} ${eval_html} ] ${c_tera_logs__escape_html(log.content.substr(0, 30))}</span></li>`;
+      return `<li><span class="log_line" tera_log_id="${id}" title="${c_tera_logs__escape_html(log.content)}">${log.date} ${type_html} <span class="c_tera_logs__who_eval">[ <span class="c_tera_logs__who">${log.who}</span> ${eval_html} ]</span> ${c_tera_logs__escape_html(log.content.substr(0, 30))}</span></li>`;
     }).join('\n');
 
     TeraLogs.l_tera_logs__overlay.innerHTML = `<ol>${l_tera_logs__overlay_html}</ol>`;
 
-    if (!TeraLogs.f_overlay_listener_added) {
-      // 一度だけ実行
-      TeraLogs.l_tera_logs__overlay.addEventListener('click', (e) => {
+    // 一度だけ実行
+    TeraLogs.l_tera_logs__overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      c_tera_logs__overlay_click(e);
+    });
+
+    TeraLogs.l_tera_logs__overlay.addEventListener('mouseover', (e) => {
+      var target = e.target;
+
+      if (target.classList.contains('c_tera_logs__who_eval') ||
+        target.classList.contains('c_tera_logs__who') ||
+        target.classList.contains('c_tera_logs__eval')) {
         e.stopPropagation();
 
-        c_tera_logs__overlay_click(e);
-      });
-      TeraLogs.f_overlay_listener_added = true;
-    }
+        var s_who = target.closest('.c_tera_logs__who_eval').querySelector('.c_tera_logs__who').textContent;
+        c_tera_logs__highlight_who(s_who);
+      }
+    });
+
+    TeraLogs.f_overlay_listener_added = true;
 
     TeraLogs.l_tera_logs__overlay.classList.add('show');
   };
@@ -423,7 +447,7 @@
 
     if (time_diff < max_hours) {
 
-      document.querySelector("main").parentElement.insertAdjacentHTML('beforebegin', `<div class="c_tera_logs__warning">質問が投稿されてから${max_hours}時間以内です。</div>`);
+      document.querySelector("main").parentElement.insertAdjacentHTML('beforebegin', `<div class="c_tera_logs__warning"><svg class="c_tera_logs__svg"><use xlink:href="#warning"/></svg>質問が投稿されてから${max_hours}時間以内です。</div>`);
     }
   };
 
@@ -437,13 +461,13 @@
     // 退会済みユーザーに対応するため
     if (target) {
 
-      var mat = target.textContent.match(/([-\d]+)/);
+      var mat = target.textContent.match(/([-\d]+)/u);
       if (mat) {
 
         var score = Number(mat[0]);
         if (score <= 0) {
 
-          document.querySelector("main").parentElement.insertAdjacentHTML('beforebegin', `<div class="c_tera_logs__warning">質問者のスコアは${score}です。</div>`);
+          document.querySelector("main").parentElement.insertAdjacentHTML('beforebegin', `<div class="c_tera_logs__warning"><svg class="c_tera_logs__svg"><use xlink:href="#warning"/></svg>質問者のスコアは${score}です。</div>`);
         }
       }
     }
@@ -454,12 +478,12 @@
    *
    */
   var add_warning_evaluation = () => {
-    var mat = document.querySelectorAll('[class*="questionHeader_rating__"]')[1].textContent.match(/(-?[\d]+)/);
+    var mat = document.querySelectorAll('[class*="questionHeader_rating__"]')[1].textContent.match(/(-?[\d]+)/u);
 
     if (mat) {
       var evaluation = Number(mat[0]);
       if (evaluation < 0) {
-        document.querySelector("main").parentElement.insertAdjacentHTML('beforebegin', `<div class="c_tera_logs__warning">質問の評価は${evaluation}です。</div>`);
+        document.querySelector("main").parentElement.insertAdjacentHTML('beforebegin', `<div class="c_tera_logs__warning"><svg class="c_tera_logs__svg"><use xlink:href="#warning"/></svg>質問の評価は${evaluation}です。</div>`);
       }
     }
   };
@@ -534,17 +558,36 @@
     document.head.insertAdjacentHTML('beforeend',
       `<style id="t_tera_logs__style">
 	/* tera logs plus */
-	#l_tera_logs__overlay span.log_line { padding: 4px; }
-	#l_tera_logs__overlay span.log_line:hover { outline: 1px dashed #5342e9; border-radius: 3px; cursor: pointer; }
+	#l_tera_logs__overlay .log_line { padding: 4px; }
+	#l_tera_logs__overlay .log_line:hover { outline: 1px dashed #5342e9; border-radius: 3px; cursor: pointer; }
   .l_tera_logs__line_visited { color:#B85A68; }
 	#l_tera_logs__overlay { transition: all .3s ease; opacity: 0; visibility: hidden; transform: translateY(30px); position: fixed; width: 90%; height: 80%; background-color: whitesmoke; z-index: 1000; left: 5%; top: 10%; overflow: auto; padding: 10px; border-radius:5px; white-space: nowrap; box-shadow: 0 0 12px grey; }
 	#l_tera_logs__overlay.show { opacity: 1; visibility: visible; transform: translateY(0px); }
-	#l_tera_logs__overlay > ol {list-style: decimal; }
+  #l_tera_logs__overlay .hover_who { background: #ffff50; }
 	#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; width: initial; background-color: #12c74b!important; }
-  .c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; font-size:1.6rem; border-radius: 5px; margin: 20px max(16px, calc((100% - 1120px)/2)); }
-	.c_tera_logs__eval { font-weight: bold; }
+	.c_tera_logs__eval { font-weight: bold; color: hotpink; }
+  .c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; font-size:1.6rem; border-radius: 5px; margin: 20px max(16px, calc((100% - 1120px)/2)); display: flex; gap: 5px; }
+	.c_tera_logs__svg { fill: currentColor; width: 24px; height: 24px; }
   html { scroll-behavior: initial; }
 	</style>`);
+  };
+
+  /**
+   * 再利用するためにsvgを追加する
+   */
+  var add_svg_template = () => {
+    if (document.getElementById('t_tera_logs__svg')) {
+      return;
+    }
+
+    document.body.insertAdjacentHTML('afterbegin',
+      `<svg xmlns="http://www.w3.org/2000/svg" style="display:none;" id="t_tera_logs__svg">
+<symbol viewBox="0 0 24 24" id="warning">
+ <path d="m12 2 10 20h-20zm0 2-8.5 17h17z" fill-rule="evenodd"/>
+ <path d="m9 10h6l-3 7z"/>
+ <circle cx="12" cy="19" r="1.7"/>
+</symbol>
+</svg>`);
   };
 
   /**
@@ -578,9 +621,10 @@
 
     f_ignore_mutation = true;
     add_style_sheet();
+    add_svg_template();
     remove_doms();
 
-    if (/^https:\/\/teratail.com\/questions\//.test(document.URL)) {
+    if (/^https:\/\/teratail.com\/questions\//u.test(document.URL)) {
       teratail_questions();
     }
 
