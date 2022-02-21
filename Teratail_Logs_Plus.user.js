@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Teratail Logs Plus
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      2.3
 // @description  Teratailにログ閲覧の機能など便利な機能を追加
 // @author       Query Kuma
 // @match        https://teratail.com/*
@@ -335,21 +335,19 @@
 
       var type_html;
       switch (log.type) {
-        case '投編':
-        case '追編':
-        case '回編':
-        case 'コ編':
-          type_html = log.type;
+        case '追記':
+        case 'コメ':
+          type_html = `<span class="c_tera_logs__comment">${log.type}</span>`;
           break;
 
         case '回答':
         case '回ベ':
         case '回自':
-          type_html = `<span style="color: #F94A00;">${log.type}</span>`;
+          type_html = `<span class="c_tera_logs__answer">${log.type}</span>`;
           break;
 
         default:
-          type_html = `<span style="color: #0404b4;">${log.type}</span>`;
+          type_html = log.type;
           break;
       }
 
@@ -557,19 +555,21 @@
 
     document.head.insertAdjacentHTML('beforeend',
       `<style id="t_tera_logs__style">
-	/* tera logs plus */
-	#l_tera_logs__overlay .log_line { padding: 4px; }
-	#l_tera_logs__overlay .log_line:hover { outline: 1px dashed #5342e9; border-radius: 3px; cursor: pointer; }
-  .l_tera_logs__line_visited { color:#B85A68; }
-	#l_tera_logs__overlay { transition: all .3s ease; opacity: 0; visibility: hidden; transform: translateY(30px); position: fixed; width: 90%; height: 80%; background-color: whitesmoke; z-index: 1000; left: 5%; top: 10%; overflow: auto; padding: 10px; border-radius:5px; white-space: nowrap; box-shadow: 0 0 12px grey; }
-	#l_tera_logs__overlay.show { opacity: 1; visibility: visible; transform: translateY(0px); }
-  #l_tera_logs__overlay .hover_who { background: #ffff50; }
-	#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; width: initial; background-color: #12c74b!important; }
-	.c_tera_logs__eval { font-weight: bold; color: hotpink; }
-  .c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; font-size:1.6rem; border-radius: 5px; margin: 20px max(16px, calc((100% - 1120px)/2)); display: flex; gap: 5px; }
-	.c_tera_logs__svg { fill: currentColor; width: 24px; height: 24px; }
-  html { scroll-behavior: initial; }
-	</style>`);
+/* tera logs plus */
+#l_tera_logs__overlay .log_line { padding: 4px; }
+#l_tera_logs__overlay .log_line:hover { outline: 1px dashed #5342e9; border-radius: 3px; cursor: pointer; }
+.l_tera_logs__line_visited { color: #ac5461; }
+#l_tera_logs__overlay { transition: all .3s ease; opacity: 0; visibility: hidden; transform: translateY(30px); position: fixed; width: 90%; height: 80%; background-color: whitesmoke; z-index: 1000; left: 5%; top: 10%; overflow: auto; padding: 10px; border-radius:5px; white-space: nowrap; box-shadow: 0 0 12px grey; }
+#l_tera_logs__overlay.show { opacity: 1; visibility: visible; transform: translateY(0px); }
+#l_tera_logs__overlay .hover_who { background: #ffff50; }
+#c_tera_logs__button { color: white; border-radius: 2px; cursor: pointer; width: initial; background-color: #12c74b!important; }
+.c_tera_logs__eval { font-weight: bold; color: #e10000; }
+.c_tera_logs__comment { color: #308000; }
+.c_tera_logs__answer { color: blue; }
+.c_tera_logs__warning { background-color:#fff3cd; color:#856404; padding:16px; font-size:1.6rem; border-radius: 5px; margin: 20px max(16px, calc((100% - 1120px)/2)); display: flex; gap: 5px; }
+.c_tera_logs__svg { fill: currentColor; width: 24px; height: 24px; }
+html { scroll-behavior: initial; }
+</style>`);
   };
 
   /**
@@ -583,7 +583,7 @@
     document.body.insertAdjacentHTML('afterbegin',
       `<svg xmlns="http://www.w3.org/2000/svg" style="display:none;" id="t_tera_logs__svg">
 <symbol viewBox="0 0 24 24" id="warning">
- <path d="m12 2 10 20h-20zm0 2-8.5 17h17z" fill-rule="evenodd"/>
+ <path d="m12 2 10 20h-20zm0 2-8.5 17h17z"/>
  <path d="m9 10h6l-3 7z"/>
  <circle cx="12" cy="19" r="1.7"/>
 </symbol>
